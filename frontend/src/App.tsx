@@ -1,11 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ThemeProvider } from "./components/theme-provider";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from "./components/ui/table";
 import logo from '/Users/lucas/Desktop/rep0rted/frontend/src/assets/t0_wordmark.svg';
 import { Button } from "./components/ui/button";
 
 const queryClient = new QueryClient();
+
+interface PacketData {
+  id: number;
+  ip_src: string;
+  mac_src: string;
+  port: number;
+  type: string;
+  rate_ideal: number;
+}
 
 function App() {
   return (
@@ -25,28 +34,58 @@ function Reporter() {
     visible: true 
   });
 
-  const [tableData, setTableData] = useState([
-    { id: "01", ip: "10.0.101.69", mac: "AE:17:D9:C69", port: "12435" },
-  ]);
+  const [tableData, setTableData] = useState<PacketData[]>([]);
+  const [nextId, setNextId] = useState(1);
+
+  useEffect(() => {
+    const eventSource = new EventSource("http://localhost:7070/events");
+
+    eventSource.onmessage = function(event) {
+      const newPacket: PacketData = JSON.parse(event.data);
+      newPacket.id = nextId; 
+      setTableData((prevData) => [newPacket, ...prevData]);
+      setNextId(nextId + 1); 
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [nextId]);
 
   const handleSkipRow = () => {
-    const newId = (tableData.length + 1).toString().padStart(2, '0');
-    setTableData([...tableData, { id: newId, ip: "", mac: "", port: "" }]);
+    setTableData([{ id: nextId, ip_src: "", mac_src: "", type: "", rate_ideal: 0, port: 0 }, ...tableData]);
+    setNextId(nextId + 1);
   };
 
-  const handleClearList = () => {
-    setTableData([]);
+  const handleClearList = async () => {
+    try {
+      const response = await fetch("http://localhost:7070/clear", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (response.ok) {
+        setTableData([]);
+        setNextId(1); 
+        console.log("Successfully cleared the backend cache");
+      } else {
+        console.error("Failed to clear the backend cache");
+      }
+    } catch (error) {
+      console.error("Error clearing the backend cache:", error);
+    }
   };
 
   const handleExportList = () => {
-    const csvHeader = "ID,IP,MAC,Port\n";
-    const csvRows = tableData.map(row => `${row.id},${row.ip},${row.mac},${row.port}`).join("\n");
+    const csvHeader = "ID,IP,MAC,Type,Port\n";
+    const csvRows = tableData.map(row => `${row.id},${row.ip_src},${row.mac_src},${row.type} - ${row.rate_ideal} TH,${row.port}`).join("\n");
     const csvContent = csvHeader + csvRows;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'table_data.csv');
+    link.setAttribute('download', 'rep0rter_data.csv');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -68,7 +107,7 @@ function Reporter() {
         <span className="blinking-circle"></span>
       </div>
       <div className="flex items-center justify-center pt-5" id="header-text">
-        <p>(Port 14235 = Antminer) & (Port 8888 = Whatsminer) & (Port 12345 = Aurdaine)</p>
+        <p>(Port 14235 = Antminer) & (Port 8888 = Whatsminer) & (Port 12345 = Aurdaine) & (Port 60040 = IceRiver)</p>
       </div>
       <div className="flex items-center justify-center p-5" id="button-section">
         <Button className="m-2" onClick={handleSkipRow} style={{ background: 'linear-gradient(90deg, hsla(4, 93%, 67%, 1) 0%, hsla(29, 86%, 52%, 1) 100%)', border: 'none', color: 'white' }}>
@@ -81,24 +120,27 @@ function Reporter() {
           Export List
         </Button>
       </div>
-      <div className="flex items-center justify-center p-10">
-        <div className="max-w-2xl w-full">
+      <div className="flex items-center justify-center p-10 w-full">
+        <div className="max-w-2xl w-full overflow-y-auto max-h-96">
           <Table className="w-full">
-            <TableHeader style={{backgroundColor: "black"}}>
+            <TableHeader className="sticky top-0 bg-black z-10">
               <TableRow>
                 <TableHead className="text-center w-[100px]">ID</TableHead>
                 <TableHead className="text-center">IP</TableHead>
                 <TableHead className="text-center">MAC</TableHead>
+                <TableHead className="text-center">Type</TableHead>
                 <TableHead className="text-center">Port</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tableData.map((row, index) => (
                 <TableRow key={index}>
-                  {/* I want to inverse the ID Indexing. Sort descending. */}
                   <TableCell className="text-center font-medium">{row.id}</TableCell>
-                  <TableCell className="text-center">{row.ip}</TableCell>
-                  <TableCell className="text-center">{row.mac}</TableCell>
+                  <TableCell className="text-center">
+                    <a href={`http://root:root@${row.ip_src}`} target="_blank" rel="noopener noreferrer">{row.ip_src}</a>
+                  </TableCell>
+                  <TableCell className="text-center">{row.mac_src}</TableCell>
+                  <TableCell className="text-center">{row.type} ({row.rate_ideal} TH)</TableCell>
                   <TableCell className="text-center">{row.port}</TableCell>
                 </TableRow>
               ))}
@@ -107,5 +149,5 @@ function Reporter() {
         </div>
       </div>
     </div>
-  );
+  );  
 }

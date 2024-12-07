@@ -81,6 +81,21 @@ const TableHead = React.forwardRef<
 ))
 TableHead.displayName = "TableHead"
 
+const StickyTableHead = React.forwardRef<
+  HTMLTableCellElement,
+  React.ThHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <TableHead
+    ref={ref}
+    className={cn(
+      "h-12 px-4 text-left align-middle font-medium text-neutral-500 dark:text-neutral-400 sticky top-0 z-10 bg-black", // Added sticky styles
+      className
+    )}
+    {...props}
+  />
+));
+StickyTableHead.displayName = "StickyTableHead";
+
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
   React.TdHTMLAttributes<HTMLTableCellElement>
@@ -114,4 +129,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  StickyTableHead,
 }
