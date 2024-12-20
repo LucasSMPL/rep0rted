@@ -15,8 +15,10 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/icholy/digest"
+	"github.com/skratchdot/open-golang/open"
 )
 
+//go:embed all:frontend/dist
 var reactFS embed.FS
 
 var (
@@ -27,29 +29,21 @@ var (
 )
 
 func main() {
+	go func() {
+		if err := startSniffing(); err != nil {
+			log.Fatalf("Error starting sniffing: %v", err)
+		}
+	}()
 
 	distFS, err := fs.Sub(reactFS, "frontend/dist")
 	if err != nil {
-		log.Printf("Error accessing embedded frontend files: %v", err)
-		fmt.Println("Press Enter to exit...")
-		fmt.Scanln()
 		log.Fatal(err)
-
 	}
-
-	// go func() {
-	// 	if err := startSniffing(); err != nil {
-	// 		log.Printf("Error starting sniffing: %v", err)
-	// 		fmt.Println("Press Enter to exit...")
-	// 		fmt.Scanln()
-	// 	}
-	// }()
 
 	router := http.NewServeMux()
 	router.Handle("/", http.FileServer(http.FS(distFS)))
-	// router.HandleFunc("/events", eventsHandler)
-	// router.HandleFunc("/clear", clearHandler)
-	router.HandleFunc("/test", testHandler)
+	router.HandleFunc("/events", eventsHandler)
+	router.HandleFunc("/clear", clearHandler)
 
 	server := http.Server{
 		Addr:    ":7070",
@@ -57,28 +51,18 @@ func main() {
 	}
 
 	log.Println("Starting HTTP server at http://localhost:7070")
-	err = server.ListenAndServe()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	// var wg sync.WaitGroup
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-	// 	if err := server.ListenAndServe(); err != nil {
-	// 		log.Printf("Error starting HTTP server: %v", err)
-	// 		fmt.Println("Press Enter to exit...")
-	// 		fmt.Scanln()
-	// 	}
-	// }()
 
-	// open.Start("http://localhost:7070")
-	// wg.Wait()
-}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatalf("Error starting HTTP server: %v", err)
+		}
+	}()
 
-func testHandler(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(map[string]string{"status": "OK"})
+	open.Start("http://localhost:7070")
+	wg.Wait()
 }
 
 func clearHandler(w http.ResponseWriter, r *http.Request) {

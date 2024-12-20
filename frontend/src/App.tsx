@@ -1,9 +1,16 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "react-query";
+import logo from "./assets/t0_wordmark.svg";
 import { ThemeProvider } from "./components/theme-provider";
-import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from "./components/ui/table";
-import logo from '/Users/lucas/Desktop/rep0rted/frontend/src/assets/t0_wordmark.svg';
 import { Button } from "./components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./components/ui/table";
 
 const queryClient = new QueryClient();
 
@@ -31,7 +38,7 @@ export default App;
 function Reporter() {
   const [banner] = useState({
     message: "The rep0rter app is up to date!",
-    visible: true 
+    visible: true,
   });
 
   const [tableData, setTableData] = useState<PacketData[]>([]);
@@ -40,11 +47,11 @@ function Reporter() {
   useEffect(() => {
     const eventSource = new EventSource("http://localhost:7070/events");
 
-    eventSource.onmessage = function(event) {
+    eventSource.onmessage = function (event) {
       const newPacket: PacketData = JSON.parse(event.data);
-      newPacket.id = nextId; 
+      newPacket.id = nextId;
       setTableData((prevData) => [newPacket, ...prevData]);
-      setNextId(nextId + 1); 
+      setNextId(nextId + 1);
     };
 
     return () => {
@@ -53,7 +60,10 @@ function Reporter() {
   }, [nextId]);
 
   const handleSkipRow = () => {
-    setTableData([{ id: nextId, ip_src: "", mac_src: "", type: "", rate_ideal: 0, port: 0 }, ...tableData]);
+    setTableData([
+      { id: nextId, ip_src: "", mac_src: "", type: "", rate_ideal: 0, port: 0 },
+      ...tableData,
+    ]);
     setNextId(nextId + 1);
   };
 
@@ -67,7 +77,7 @@ function Reporter() {
       });
       if (response.ok) {
         setTableData([]);
-        setNextId(1); 
+        setNextId(1);
         console.log("Successfully cleared the backend cache");
       } else {
         console.error("Failed to clear the backend cache");
@@ -79,14 +89,19 @@ function Reporter() {
 
   const handleExportList = () => {
     const csvHeader = "ID,IP,MAC,Type,Port\n";
-    const csvRows = tableData.map(row => `${row.id},${row.ip_src},${row.mac_src},${row.type} - ${row.rate_ideal} TH,${row.port}`).join("\n");
+    const csvRows = tableData
+      .map(
+        (row) =>
+          `${row.id},${row.ip_src},${row.mac_src},${row.type} - ${row.rate_ideal} TH,${row.port}`
+      )
+      .join("\n");
     const csvContent = csvHeader + csvRows;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'rep0rter_data.csv');
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute("download", "rep0rter_data.csv");
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -95,28 +110,68 @@ function Reporter() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {banner.visible && (
-        <div className="text-center py-4 border" style={{ backgroundColor: "#0a0a0a", color: "#ffffff", borderColor: "#ee821a" }}>
+        <div
+          className="text-center py-4 border"
+          style={{
+            backgroundColor: "#0a0a0a",
+            color: "#ffffff",
+            borderColor: "#ee821a",
+          }}
+        >
           {banner.message}
         </div>
       )}
       <div className="flex items-center justify-center" id="logo-container">
-        <img src={logo} alt="Logo" className="max-w-sm p-5"/>
+        <img src={logo} alt="Logo" className="max-w-sm p-5" />
       </div>
       <div className="flex items-center justify-center" id="header-text">
-        <p>Currently listening for ASIC IP Addresses. Press the IP Report button on your miner, and check the table below.</p>
+        <p>
+          Currently listening for ASIC IP Addresses. Press the IP Report button
+          on your miner, and check the table below.
+        </p>
         <span className="blinking-circle"></span>
       </div>
       <div className="flex items-center justify-center pt-5" id="header-text">
-        <p>(Port 14235 = Antminer) & (Port 8888 = Whatsminer) & (Port 12345 = Aurdaine) & (Port 60040 = IceRiver)</p>
+        <p>
+          (Port 14235 = Antminer) & (Port 8888 = Whatsminer) & (Port 12345 =
+          Aurdaine) & (Port 60040 = IceRiver)
+        </p>
       </div>
       <div className="flex items-center justify-center p-5" id="button-section">
-        <Button className="m-2" onClick={handleSkipRow} style={{ background: 'linear-gradient(90deg, hsla(4, 93%, 67%, 1) 0%, hsla(29, 86%, 52%, 1) 100%)', border: 'none', color: 'white' }}>
+        <Button
+          className="m-2"
+          onClick={handleSkipRow}
+          style={{
+            background:
+              "linear-gradient(90deg, hsla(4, 93%, 67%, 1) 0%, hsla(29, 86%, 52%, 1) 100%)",
+            border: "none",
+            color: "white",
+          }}
+        >
           Skip Row
         </Button>
-        <Button className="m-2" onClick={handleClearList} style={{ background: 'linear-gradient(90deg, hsla(4, 93%, 67%, 1) 0%, hsla(29, 86%, 52%, 1) 100%)', border: 'none', color: 'white' }}>
+        <Button
+          className="m-2"
+          onClick={handleClearList}
+          style={{
+            background:
+              "linear-gradient(90deg, hsla(4, 93%, 67%, 1) 0%, hsla(29, 86%, 52%, 1) 100%)",
+            border: "none",
+            color: "white",
+          }}
+        >
           Clear List
         </Button>
-        <Button className="m-2" onClick={handleExportList} style={{ background: 'linear-gradient(90deg, hsla(4, 93%, 67%, 1) 0%, hsla(29, 86%, 52%, 1) 100%)', border: 'none', color: 'white' }}>
+        <Button
+          className="m-2"
+          onClick={handleExportList}
+          style={{
+            background:
+              "linear-gradient(90deg, hsla(4, 93%, 67%, 1) 0%, hsla(29, 86%, 52%, 1) 100%)",
+            border: "none",
+            color: "white",
+          }}
+        >
           Export List
         </Button>
       </div>
@@ -135,12 +190,22 @@ function Reporter() {
             <TableBody>
               {tableData.map((row, index) => (
                 <TableRow key={index}>
-                  <TableCell className="text-center font-medium">{row.id}</TableCell>
+                  <TableCell className="text-center font-medium">
+                    {row.id}
+                  </TableCell>
                   <TableCell className="text-center">
-                    <a href={`http://root:root@${row.ip_src}`} target="_blank" rel="noopener noreferrer">{row.ip_src}</a>
+                    <a
+                      href={`http://root:root@${row.ip_src}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {row.ip_src}
+                    </a>
                   </TableCell>
                   <TableCell className="text-center">{row.mac_src}</TableCell>
-                  <TableCell className="text-center">{row.type} ({row.rate_ideal} TH)</TableCell>
+                  <TableCell className="text-center">
+                    {row.type} ({row.rate_ideal} TH)
+                  </TableCell>
                   <TableCell className="text-center">{row.port}</TableCell>
                 </TableRow>
               ))}
@@ -149,5 +214,5 @@ function Reporter() {
         </div>
       </div>
     </div>
-  );  
+  );
 }
