@@ -15,7 +15,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/icholy/digest"
-	"github.com/skratchdot/open-golang/open"
 )
 
 var reactFS embed.FS
@@ -29,26 +28,28 @@ var (
 
 func main() {
 
-	go func() {
-		if err := startSniffing(); err != nil {
-			log.Printf("Error starting sniffing: %v", err)
-			fmt.Println("Press Enter to exit...")
-			fmt.Scanln()
-		}
-	}()
-
 	distFS, err := fs.Sub(reactFS, "frontend/dist")
 	if err != nil {
 		log.Printf("Error accessing embedded frontend files: %v", err)
 		fmt.Println("Press Enter to exit...")
 		fmt.Scanln()
-		return
+		log.Fatal(err)
+
 	}
+
+	// go func() {
+	// 	if err := startSniffing(); err != nil {
+	// 		log.Printf("Error starting sniffing: %v", err)
+	// 		fmt.Println("Press Enter to exit...")
+	// 		fmt.Scanln()
+	// 	}
+	// }()
 
 	router := http.NewServeMux()
 	router.Handle("/", http.FileServer(http.FS(distFS)))
-	router.HandleFunc("/events", eventsHandler)
-	router.HandleFunc("/clear", clearHandler)
+	// router.HandleFunc("/events", eventsHandler)
+	// router.HandleFunc("/clear", clearHandler)
+	router.HandleFunc("/test", testHandler)
 
 	server := http.Server{
 		Addr:    ":7070",
@@ -56,20 +57,28 @@ func main() {
 	}
 
 	log.Println("Starting HTTP server at http://localhost:7070")
+	err = server.ListenAndServe()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// var wg sync.WaitGroup
+	// wg.Add(1)
+	// go func() {
+	// 	defer wg.Done()
+	// 	if err := server.ListenAndServe(); err != nil {
+	// 		log.Printf("Error starting HTTP server: %v", err)
+	// 		fmt.Println("Press Enter to exit...")
+	// 		fmt.Scanln()
+	// 	}
+	// }()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := server.ListenAndServe(); err != nil {
-			log.Printf("Error starting HTTP server: %v", err)
-			fmt.Println("Press Enter to exit...")
-			fmt.Scanln()
-		}
-	}()
+	// open.Start("http://localhost:7070")
+	// wg.Wait()
+}
 
-	open.Start("http://localhost:7070")
-	wg.Wait()
+func testHandler(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]string{"status": "OK"})
 }
 
 func clearHandler(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +117,7 @@ func startSniffing() error {
 	}
 	defer handle.Close()
 
-	var filter string = "udp port 14235 or udp port 8888 or udp port 12345 or udp port 11503 or udp port 60040"
+	var filter string = "udp port 14235 or udp port 8888 or udp port 12345 or udp port 11503 or udp port 60040 or udp port 45588 or udp port 9999"
 	err = handle.SetBPFFilter(filter)
 	if err != nil {
 		return fmt.Errorf("error setting BPF filter: %v", err)
@@ -280,7 +289,7 @@ func getMinerInfo(ip string) (map[string]interface{}, error) {
 
 	summaryMap, ok := summary[0].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Invalid SUMMARY format")
+		return nil, fmt.Errorf("invalid summary format")
 	}
 
 	rateIdeal, ok := summaryMap["rate_ideal"].(float64)
